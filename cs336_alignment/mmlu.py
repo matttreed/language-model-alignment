@@ -10,7 +10,7 @@ def load_mmlu_dataset(dir=MMLU_TEST_DIR_PATH):
     data = []
 
     for file_path in file_paths:
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path, header=None)
         subject = os.path.basename(file_path).split('.')[0].replace("_", " ")
         for row in df.itertuples():
             data.append(
@@ -44,7 +44,7 @@ def get_mmlu_prompts():
     questions = [get_mmlu_prompt(ex["subject"], ex["question"], ex["options"]) for ex in data]
     return questions, data
 
-def parse_mmlu_response(response: str):
+def parse_mmlu_response(response: str, options=None):
     index = response.find("The correct answer is ")
     
     if index != -1:
@@ -52,5 +52,9 @@ def parse_mmlu_response(response: str):
         
         if answer in 'ABCD':
             return answer
+
+    # for option, letter in zip(options, ["A", "B", "C", "D"]):
+    #     if option in response:
+    #         return letter
     
     return None

@@ -8,6 +8,8 @@ import torch
 from torch.utils.data import Dataset
 from transformers import PreTrainedTokenizerBase
 from cs336_alignment.mmlu import parse_mmlu_response
+from cs336_alignment.gsm8k import parse_gsm8k_response
+from cs336_alignment.sft import SFTDataset, get_batches
 
 
 def get_packed_sft_dataset(
@@ -37,7 +39,7 @@ def get_packed_sft_dataset(
         "input_ids" contains the token IDs for the language modeling inputs, and "labels" contains
         the token IDs for the language modeling labels.
     """
-    raise NotImplementedError
+    return SFTDataset(tokenizer, dataset_path, seq_length, shuffle)
 
 
 def run_iterate_batches(
@@ -60,7 +62,7 @@ def run_iterate_batches(
     Returns:
         Iterable over batches, where each batch has size `batch_size`.
     """
-    raise NotImplementedError
+    return get_batches(dataset, batch_size, shuffle)
 
 
 def run_parse_mmlu_response(
@@ -86,7 +88,7 @@ def run_parse_mmlu_response(
         str (one of "A", "B", "C", or "D") if the model output can be parsed into a prediction,
         else None.
     """
-    return parse_mmlu_response(model_output)
+    return parse_mmlu_response(model_output, mmlu_example["options"])
 
 
 def run_parse_gsm8k_response(
@@ -103,7 +105,10 @@ def run_parse_gsm8k_response(
         str with the predicted numeric answer if the model output can be parsed into a prediction,
         else None.
     """
-    raise NotImplementedError
+    result = parse_gsm8k_response(model_output)
+    if result:
+        return str(result)
+    return None
 
 
 def compute_per_instance_dpo_loss(
