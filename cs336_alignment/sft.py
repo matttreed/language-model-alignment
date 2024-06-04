@@ -31,18 +31,22 @@ class SFTDataset(Dataset):
         self.tokens = []
 
         print("Tokenizing Dataset")
-        # with gzip.open(dataset_path, 'r') as file:
-        with open(dataset_path, 'r') as file:
+        lines = None
+        if dataset_path.endswith(".gz"):
+            with gzip.open(dataset_path, 'r') as file:
+                lines = file.readlines()
+        else:
+            with open(dataset_path, 'r') as file:
+                lines = file.readlines()
 
-            lines = file.readlines()
-            if shuffle:
-                random.shuffle(lines)
+        if shuffle:
+            random.shuffle(lines)
 
-            for line in tqdm(lines):
-                json_obj = json.loads(line)
-                sft_string = get_sft_string(json_obj["prompt"], json_obj["response"]) + END_OF_TEXT_TOKEN
-                sft_tokenized = self.tokenizer(sft_string, add_special_tokens=True, truncation=False)['input_ids']
-                self.tokens += sft_tokenized
+        for line in tqdm(lines):
+            json_obj = json.loads(line)
+            sft_string = get_sft_string(json_obj["prompt"], json_obj["response"]) + END_OF_TEXT_TOKEN
+            sft_tokenized = self.tokenizer(sft_string, add_special_tokens=True, truncation=False)['input_ids']
+            self.tokens += sft_tokenized
 
     def __len__(self):
         return (len(self.tokens) - 1) // self.seq_length
