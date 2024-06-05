@@ -55,7 +55,6 @@ class SFTDataset(Dataset):
         
         start_i = self.seq_length * i
         input_ids = torch.tensor(self.tokens[start_i:start_i+self.seq_length], dtype=torch.long)
-        print(len(self.tokens[start_i:start_i+self.seq_length]), i, len(self))
         labels = torch.tensor(self.tokens[start_i + 1:start_i+self.seq_length + 1], dtype=torch.long)
         return {
             "input_ids": input_ids,

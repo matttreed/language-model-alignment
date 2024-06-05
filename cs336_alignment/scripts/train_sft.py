@@ -61,7 +61,8 @@ def train(
     dtype,
     wandb_project,
     shuffle_data,
-    model_name_or_path
+    model_name_or_path,
+    epochs
 ):
     logger.info("Loading Tokenizer")
     tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
@@ -129,58 +130,63 @@ def train(
         eps=adam_eps,
     )
 
-    train_steps = len(train_data) // batch_size
+    train_steps = (len(train_data) // batch_size) * epochs
 
-    for i, train_batch in enumerate(tqdm(get_batches(train_data, batch_size, shuffle_data))):
-        if lr_scheduler.lower() == "cosine":
-            lr = get_cosine_lr(
-                i,
-                max_learning_rate=learning_rate,
-                min_learning_rate=learning_rate * 0.1,
-                warmup_iters=int(train_steps * warmup_ratio),
-                cosine_cycle_iters=train_steps,
+    i = 0
+
+    for epoch in range(epochs):
+        logger.info(f"Starting Epoch {epoch}")
+        for train_batch in tqdm(get_batches(train_data, batch_size, shuffle_data)):
+            if lr_scheduler.lower() == "cosine":
+                lr = get_cosine_lr(
+                    i,
+                    max_learning_rate=learning_rate,
+                    min_learning_rate=learning_rate * 0.1,
+                    warmup_iters=int(train_steps * warmup_ratio),
+                    cosine_cycle_iters=train_steps,
+                )
+                for param_group in optimizer.param_groups:
+                    param_group["lr"] = lr
+            else:
+                lr = learning_rate
+
+            # with amp_ctx:
+            input_ids = train_batch["input_ids"].to(device)
+            labels = train_batch["labels"].to(device)
+            logits = model(input_ids).logits
+            loss = (
+                F.cross_entropy(logits.view(-1, logits.size(-1)), labels.view(-1))
+                / gradient_accumulation_steps
             )
-            for param_group in optimizer.param_groups:
-                param_group["lr"] = lr
-        else:
-            lr = learning_rate
+            scaler.scale(loss).backward()
 
-        # with amp_ctx:
-        input_ids = train_batch["input_ids"].to(device)
-        labels = train_batch["labels"].to(device)
-        logits = model(input_ids).logits
-        loss = (
-            F.cross_entropy(logits.view(-1, logits.size(-1)), labels.view(-1))
-            / gradient_accumulation_steps
-        )
-        scaler.scale(loss).backward()
+            if (i + 1) % gradient_accumulation_steps == 0:
 
-        if (i + 1) % gradient_accumulation_steps == 0:
+                if grad_clip:
+                    scaler.unscale_(optimizer)
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
 
-            if grad_clip:
-                scaler.unscale_(optimizer)
-                torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad(set_to_none=True)
 
-            scaler.step(optimizer)
-            scaler.update()
-            optimizer.zero_grad(set_to_none=True)
+                loss_float = loss.item() * gradient_accumulation_steps
+                logger.info(f"Train step {i}, Loss: {loss_float}")
+                if wandb_project:
+                    wandb.log({"train_loss": loss_float, "lr": lr}, step=i)
 
-            loss_float = loss.item() * gradient_accumulation_steps
-            logger.info(f"Train step {i}, Loss: {loss_float}")
-            if wandb_project:
-                wandb.log({"train_loss": loss_float, "lr": lr}, step=i)
-
-        if i != 0 and i % eval_interval == 0:
-            dev_loss = estimate_dev_loss(
-                model=model,
-                dev_dataset=dev_data,
-                batch_size=batch_size,
-                eval_iters=eval_iters,
-                device=device,
-            )
-            logger.info(f"Estimated validation loss: {dev_loss}")
-            if wandb_project:
-                wandb.log({"eval_loss": dev_loss}, step=i)
+            if i != 0 and i % eval_interval == 0:
+                dev_loss = estimate_dev_loss(
+                    model=model,
+                    dev_dataset=dev_data,
+                    batch_size=batch_size,
+                    eval_iters=eval_iters,
+                    device=device,
+                )
+                logger.info(f"Estimated validation loss: {dev_loss}")
+                if wandb_project:
+                    wandb.log({"eval_loss": dev_loss}, step=i)
+            i += 1
 
     dev_loss = estimate_dev_loss(
         model=model,
@@ -361,6 +367,12 @@ if __name__ == "__main__":
         type=str,
         help="Name or path of model to be finetuned",
     )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=1,
+        help="Number of epochs",
+    )
     args = parser.parse_args()
 
 
@@ -405,6 +417,7 @@ if __name__ == "__main__":
         args.dtype,
         args.wandb_project,
         args.shuffle_data,
-        args.model_name_or_path
+        args.model_name_or_path,
+        args.epochs
     )
     logger.info("finished running %s", sys.argv[0])
