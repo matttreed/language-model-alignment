@@ -69,6 +69,6 @@ python /home/c-mattreed/language-model-alignment/cs336_alignment/scripts/train_s
 --dtype bfloat16 \
 --wandb-project cs336-sft \
 --device cuda \
---model-name-or-path "/home/c-mattreed/language-model-alignment/models" \
+--model-name-or-path "/data/Meta-Llama-3-8B" \
 --epochs 2 \
 --shuffle-data

@@ -133,6 +133,7 @@ def train(
     train_steps = (len(train_data) // batch_size) * epochs
 
     i = 0
+    min_validation_loss = 1e99
 
     for epoch in range(epochs):
         logger.info(f"Starting Epoch {epoch}")
@@ -184,26 +185,22 @@ def train(
                     device=device,
                 )
                 logger.info(f"Estimated validation loss: {dev_loss}")
+                if dev_loss < min_validation_loss:
+                    save_model(model, tokenizer, output_dir)
+                    min_validation_loss = dev_loss
+                    logger.info("New Best, Saving Model")
                 if wandb_project:
                     wandb.log({"eval_loss": dev_loss}, step=i)
             i += 1
 
-    dev_loss = estimate_dev_loss(
-        model=model,
-        dev_dataset=dev_data,
-        batch_size=batch_size,
-        eval_iters=eval_iters,
-        device=device,
-    )
-    logger.info(f"Final estimated validation loss: {dev_loss}")
-    if wandb_project:
-        wandb.log({"eval_loss": dev_loss}, step=train_steps)
-
+    
+def save_model(
+        model: AutoModelForCausalLM, 
+        tokenizer: AutoTokenizer,
+        output_dir: str
+        ):
     model.save_pretrained(save_directory=output_dir)
     tokenizer.save_pretrained(save_directory=output_dir)
-
-    
-
 
 
 @torch.no_grad()
