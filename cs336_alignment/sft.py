@@ -17,7 +17,7 @@ def get_sft_string(prompt, response):
         f"{prompt}\n"
         "\n"
         "### Response:\n"
-        f"{response}<|end_of_text|>"
+        f"{response}"
     )
 
 class SFTDataset(Dataset):
@@ -43,7 +43,7 @@ class SFTDataset(Dataset):
 
         for line in tqdm(lines):
             json_obj = json.loads(line)
-            sft_string = get_sft_string(json_obj["prompt"], json_obj["response"])
+            sft_string = get_sft_string(json_obj["prompt"], json_obj["response"]) + tokenizer.eos_token
             sft_tokenized = self.tokenizer(sft_string, add_special_tokens=True, truncation=False)['input_ids']
             self.tokens += sft_tokenized
 
