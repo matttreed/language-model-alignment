@@ -62,7 +62,8 @@ def train(
     wandb_project,
     shuffle_data,
     model_name_or_path,
-    epochs
+    epochs,
+    max_generation_length
 ):
     logger.info("Loading Tokenizer")
     tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
@@ -134,15 +135,15 @@ def train(
     #     betas=(adam_beta1, adam_beta2),
     #     eps=adam_eps,
     # )
-    # optimizer = torch.optim.RMSprop(
-    #     optim_groups,
-    #     lr=learning_rate,
-    #     alpha=0.99,
-    #     eps=1e-8,
-    #     weight_decay=0.001,
-    #     momentum=0.9,
-    #     centered=False
-    # )
+    optimizer = torch.optim.RMSprop(
+        optim_groups,
+        lr=learning_rate,
+        alpha=0.99,
+        eps=1e-8,
+        weight_decay=0.001,
+        momentum=0.9,
+        centered=False
+    )
     optimizer = torch.optim.SGD(
         optim_groups,
         lr=learning_rate
@@ -183,6 +184,7 @@ def train(
                     prompt=prompts[j],
                     response_chosen=chosen_responses[j],
                     response_rejected=rejected_responses[j],
+                    max_length=max_generation_length
                     # logger=logger
                 )
                 loss /= gradient_accumulation_steps
@@ -216,7 +218,8 @@ def train(
                     tokenizer=tokenizer,
                     dev_dataset=dev_data,
                     batch_size=batch_size,
-                    dpo_beta=dpo_beta
+                    dpo_beta=dpo_beta,
+                    max_generation_length=max_generation_length
                 )
                 logger.info(f"Estimated validation loss: {dev_loss}")
                 if dev_accuracy > best_dev_accuracy:
@@ -244,7 +247,8 @@ def estimate_dev_loss(
     tokenizer: AutoTokenizer,
     dev_dataset: DPODataset,
     batch_size: int,
-    dpo_beta: float
+    dpo_beta: float,
+    max_generation_length
 ):
     model.eval()
     losses = []
@@ -262,7 +266,8 @@ def estimate_dev_loss(
                 beta=dpo_beta,
                 prompt=prompts[i],
                 response_chosen=chosen_responses[i],
-                response_rejected=rejected_responses[i]
+                response_rejected=rejected_responses[i],
+                max_length=max_generation_length
             )
             losses.append(loss)
             accuracies.append(accuracy)
@@ -312,6 +317,12 @@ if __name__ == "__main__":
             "Number of forward+backward passes to do with given "
             "batch size for each single train step"
         ),
+    ),
+    parser.add_argument(
+        "--max-generation-length",
+        default=1024,
+        type=int,
+        help="",
     )
     parser.add_argument(
         "--dpo-beta",
@@ -460,6 +471,7 @@ if __name__ == "__main__":
         args.wandb_project,
         args.shuffle_data,
         args.model_name_or_path,
-        args.epochs
+        args.epochs,
+        args.max_generation_length
     )
     logger.info("finished running %s", sys.argv[0])

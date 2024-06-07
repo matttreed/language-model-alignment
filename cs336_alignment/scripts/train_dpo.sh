@@ -71,4 +71,5 @@ python /home/c-mattreed/language-model-alignment/cs336_alignment/scripts/train_d
 --dpo-beta 0.1 \
 --device-model "cuda:0" \
 --device-ref "cuda:1" \
+--max-generation-length 1024 \
 --wandb-project cs336-dpo

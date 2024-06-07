@@ -39,14 +39,15 @@ def per_instance_dpo_loss(
         prompt: str,
         response_chosen: str,
         response_rejected: str,
+        max_length: int | None = None
         # logger=None
     ):
 
     lm_device = next(lm.parameters()).device
     ref_device = next(lm_ref.parameters()).device
 
-    chosen_tokenized = tokenizer.encode(get_sft_string(prompt, response_chosen) + tokenizer.eos_token, add_special_tokens=True, truncation=False, return_tensors="pt")
-    rejected_tokenized = tokenizer.encode(get_sft_string(prompt, response_rejected) + tokenizer.eos_token, add_special_tokens=True, truncation=False, return_tensors="pt")
+    chosen_tokenized = tokenizer.encode(get_sft_string(prompt, response_chosen) + tokenizer.eos_token, add_special_tokens=True, truncation=False, return_tensors="pt", max_length=max_length)
+    rejected_tokenized = tokenizer.encode(get_sft_string(prompt, response_rejected) + tokenizer.eos_token, add_special_tokens=True, truncation=False, return_tensors="pt", max_length=max_length)
 
     chosen_log_prob = get_log_prob(lm(chosen_tokenized.to(lm_device)).logits, chosen_tokenized.to(lm_device))
     rejected_log_prob = get_log_prob(lm(rejected_tokenized.to(lm_device)).logits, rejected_tokenized.to(lm_device))
