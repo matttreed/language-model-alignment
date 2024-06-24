@@ -1,5 +1,9 @@
 *.bin
-models/
+model/
+model_sft/
+model_dpo/
+model_dpo_2/
+wandb/
 
 nav
 tags

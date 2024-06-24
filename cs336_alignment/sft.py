@@ -13,13 +13,12 @@ def get_sft_string(prompt, response):
     return (
         "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n"
         "\n"
-        "### Instruction\n"
+        "### Instruction:\n"
         f"{prompt}\n"
         "\n"
-        "### Response\n"
-        f"{response}\n"
+        "### Response:\n"
+        f"{response}"
     )
-
 
 class SFTDataset(Dataset):
     def __init__(self, tokenizer: PreTrainedTokenizerBase, dataset_path: str, seq_length: int, shuffle: bool =False):
@@ -32,7 +31,7 @@ class SFTDataset(Dataset):
 
         print("Tokenizing Dataset")
         lines = None
-        if dataset_path.endswith(".gz"):
+        if type(dataset_path) == str and dataset_path.endswith(".gz"):
             with gzip.open(dataset_path, 'r') as file:
                 lines = file.readlines()
         else:
@@ -44,7 +43,7 @@ class SFTDataset(Dataset):
 
         for line in tqdm(lines):
             json_obj = json.loads(line)
-            sft_string = get_sft_string(json_obj["prompt"], json_obj["response"]) + END_OF_TEXT_TOKEN
+            sft_string = get_sft_string(json_obj["prompt"], json_obj["response"]) + tokenizer.eos_token
             sft_tokenized = self.tokenizer(sft_string, add_special_tokens=True, truncation=False)['input_ids']
             self.tokens += sft_tokenized
 
@@ -55,7 +54,6 @@ class SFTDataset(Dataset):
         
         start_i = self.seq_length * i
         input_ids = torch.tensor(self.tokens[start_i:start_i+self.seq_length], dtype=torch.long)
-        print(len(self.tokens[start_i:start_i+self.seq_length]), i, len(self))
         labels = torch.tensor(self.tokens[start_i + 1:start_i+self.seq_length + 1], dtype=torch.long)
         return {
             "input_ids": input_ids,

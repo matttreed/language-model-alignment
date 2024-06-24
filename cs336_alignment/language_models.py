@@ -1,6 +1,6 @@
 from vllm import LLM, SamplingParams
 
-MODELPATH_7B = "/data/Meta-Llama-3-8B"
+MODELPATH_8B = "/data/Meta-Llama-3-8B"
 MODELPATH_80B_INSTRUCT = "/home/shared/Meta-Llama-3-70B-Instruct"
 
 

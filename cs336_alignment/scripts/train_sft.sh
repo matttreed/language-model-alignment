@@ -33,10 +33,29 @@ conda activate cs336_alignment
 # --compile \
 # --device cuda
 
+# python /home/c-mattreed/language-model-alignment/cs336_alignment/scripts/train_sft.py \
+# --train-path /home/shared/safety_augmented_ultrachat_200k_single_turn/train.jsonl.gz \
+# --dev-path /home/shared/safety_augmented_ultrachat_200k_single_turn/test.jsonl.gz \
+# --output-dir /home/c-mattreed/language-model-alignment/models \
+# --batch-size 2 \
+# --gradient-accumulation-steps 16 \
+# --sequence-length 512 \
+# --eval-iters 1000 \
+# --eval-interval 1000 \
+# --learning-rate 2e-5 \
+# --lr-scheduler cosine \
+# --weight-decay 0.1 \
+# --warmup-ratio 0.01 \
+# --grad-clip 1.0 \
+# --dtype bfloat16 \
+# --wandb-project cs336-sft \
+# --device cuda \
+# --model-name-or-path "/data/Meta-Llama-3-8B"
+
 python /home/c-mattreed/language-model-alignment/cs336_alignment/scripts/train_sft.py \
 --train-path /home/shared/safety_augmented_ultrachat_200k_single_turn/train.jsonl.gz \
 --dev-path /home/shared/safety_augmented_ultrachat_200k_single_turn/test.jsonl.gz \
---output-dir /home/c-mattreed/language-model-alignment/models \
+--output-dir /home/c-mattreed/language-model-alignment/models_2 \
 --batch-size 2 \
 --gradient-accumulation-steps 16 \
 --sequence-length 512 \
@@ -50,4 +69,6 @@ python /home/c-mattreed/language-model-alignment/cs336_alignment/scripts/train_s
 --dtype bfloat16 \
 --wandb-project cs336-sft \
 --device cuda \
---model-name-or-path "/data/Meta-Llama-3-8B"
+--model-name-or-path "/data/Meta-Llama-3-8B" \
+--epochs 2 \
+--shuffle-data
